@@ -54,4 +54,5 @@ class Server(object):
                 break
 
             conn, addr = v
-            self._callback(conn)
+            # call the callback in a new (detached) thread so this consumer can continue
+            thread.start_new(self._callback, (conn,))

@@ -2,6 +2,7 @@ from server import Server
 
 class Node(object):
 
+    # called whenever the server receives data
     def request_handler(self, conn):
         try:
             data = conn.recv(8096)
