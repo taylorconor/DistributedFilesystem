@@ -1,10 +1,16 @@
-import re, os, errno
+import re, os, errno, shutil
 from server import Server
 
 class Node(object):
 
+    # remove any trailing slashes from the end of a directory path
+    def _clean_path(self, path):
+        while path.endswith('/'):
+            path = path[:len(path)-1]
+        return path
+
     # called whenever the server receives data
-    def request_handler(self, conn):
+    def _request_handler(self, conn):
         try:
             data = conn.recv(8096)
             input = data.split()
@@ -23,29 +29,33 @@ class Node(object):
                     conn.send("Handling PUT request for file: " + input[1])
 
             elif input[0] == "MKDIR":
-                newdir = self._dir + input[1]
-                # remove trailing slash, if any
-                while newdir.endswith('/'):
-                    newdir = newdir[:len(newdir)-1]
+                newdir = self._clean_path(self._dir + input[1])
                 basedir = os.path.dirname(newdir)
                 if not os.path.isdir(basedir):
                     conn.send("NO_EXIST")
                 else:
                     try:
-	                    os.makedirs(newdir)
+                        os.makedirs(newdir)
+                        conn.send("OK")
                     except Exception as e:
 	                    if e.errno != errno.EEXIST:
 		                    raise
+                            else:
+                                conn.send("EXISTS")
 
             elif input[0] == "DELETE":
-                filename = self._dir + input[1]
-                if not os.path.isfile(filename):
-                    conn.send("NO_EXIST")
+                object = self._clean_path(self._dir + input[1])
+                if os.path.isdir(object):
+                    shutil.rmtree(object)
+                    conn.send("OK")
+                elif os.path.isfile(object):
+                    os.remove(object)
+                    conn.send("OK")
                 else:
-                    conn.send("Handling DELETE request for file: " + input[1])
+                     conn.send("NO_EXIST")
 
             else:
-                conn.send("ERR")
+                conn.send("INVALID_COMMAND")
             conn.close()
         except Exception as e:
             conn.send("ERR")
@@ -53,5 +63,5 @@ class Node(object):
 
     def __init__(self, dir):
         self._dir = dir
-        self._server = Server(8001, 10, self.request_handler)
+        self._server = Server(8001, 10, self._request_handler)
         self._server.start()
