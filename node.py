@@ -21,12 +21,20 @@ class Node(object):
                 else:
                     conn.send("Handling GET request for file: " + input[1])
 
+            # PUT uploads a file (either adding a new file or overwriting an existing one)
             elif input[0] == "PUT":
                 filepath = os.path.dirname(input[1])
                 if not os.path.isdir(self._dir + filepath):
                     conn.send("NO_EXIST")
                 else:
-                    conn.send("Handling PUT request for file: " + input[1])
+                    conn.send("OK")
+                    f = open(self._dir + input[1], "wb")
+                    l = conn.recv(1024)
+                    while l:
+                        f.write(l)
+                        l = conn.recv(1024)
+                    f.close()
+                    conn.send("OK")
 
             elif input[0] == "MKDIR":
                 newdir = self._clean_path(self._dir + input[1])
@@ -52,7 +60,7 @@ class Node(object):
                     os.remove(object)
                     conn.send("OK")
                 else:
-                     conn.send("NO_EXIST")
+                    conn.send("NO_EXIST")
 
             else:
                 conn.send("INVALID_COMMAND")
