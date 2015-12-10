@@ -1,6 +1,6 @@
 import thread, Queue, socket, sys, os, signal
 
-class Server(object):
+class TCPServer(object):
 
     _queue = Queue.Queue()  # incoming connection queue
     _pool = []              # thread pool
