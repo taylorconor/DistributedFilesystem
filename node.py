@@ -1,5 +1,9 @@
-import re, os, errno, shutil
-from server import Server
+import os
+import errno
+import shutil
+
+from utils.TCPServer import TCPServer
+
 
 class Node(object):
 
@@ -92,5 +96,5 @@ class Node(object):
 
     def __init__(self, dir):
         self._dir = dir
-        self._server = Server(8001, 10, self._request_handler)
+        self._server = TCPServer(8001, 10, self._request_handler)
         self._server.start()
