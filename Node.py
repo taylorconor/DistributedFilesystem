@@ -100,7 +100,15 @@ class Node(object):
     def _advertise_data(self, host, port, ds_host, ds_port):
         print "Advertising to Directory Server..."
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((ds_host, ds_port))
+        try:
+            s.connect((ds_host, ds_port))
+        except Exception as e:
+            if e.errno == errno.ECONNREFUSED:
+                print "*!* ERROR: Unable to connect to Directory Server!"
+                print "*!* Node and Directory Server are *NOT* in sync!"
+            else:
+                print e
+            return
         s.send("ADVERTISE "+host+" "+str(port))
         data = s.recv(1024)
         if data != "OK":
