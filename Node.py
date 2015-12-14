@@ -1,17 +1,26 @@
+"""
+Node
+
+An ordinary node server
+"""
+
 import os
 import errno
 import shutil
+import socket
+import json
 
 from utils.TCPServer import TCPServer
 
-
 class Node(object):
 
-    # remove any trailing slashes from the end of a directory path
-    def _clean_path(self, path):
-        while path.endswith('/'):
-            path = path[:len(path)-1]
-        return path
+    # convert a fully qualified path to a relative path
+    def _relative_path(self, base, path):
+        _base = base.strip('/')
+        _path = path.strip('/')
+        if _path.startswith(_base):
+            _path = _path[len(_base):]
+        return _path.strip('/')
 
     # GET downloads a file to the client
     def _get_handler(self, conn, input):
@@ -20,10 +29,7 @@ class Node(object):
             conn.send("NO_EXIST")
         else:
             f = open(filename, "rb")
-            l = f.read(1024)
-            while l:
-                conn.send(l)
-                l = f.read(1024)
+            conn.send_file(f)
             f.close()
             conn.shutdown(socket.SHUT_WR)
             conn.close()
@@ -36,16 +42,13 @@ class Node(object):
         else:
             conn.send("OK")
             f = open(self._dir + input, "wb")
-            l = conn.recv(1024)
-            while l:
-                f.write(l)
-                l = conn.recv(1024)
+            conn.recv_file(f)
             f.close()
             conn.send("OK")
 
     # MKDIR creates a directory in the node
     def _mkdir_handler(self, conn, input):
-        newdir = self._clean_path(self._dir + input)
+        newdir = str(self._dir + input).strip('/')
         basedir = os.path.dirname(newdir)
         if not os.path.isdir(basedir):
             conn.send("NO_EXIST")
@@ -54,14 +57,14 @@ class Node(object):
                 os.makedirs(newdir)
                 conn.send("OK")
             except Exception as e:
-	            if e.errno != errno.EEXIST:
-		            raise
-                    else:
-                        conn.send("EXISTS")
+                if e.errno != errno.EEXIST:
+                    raise
+                else:
+                    conn.send("EXISTS")
 
     # DELETE deletes a file or directory *recursively* in the node
     def _delete_handler(self, conn, input):
-        object = self._clean_path(self._dir + input)
+        object = str(self._dir + input).strip('/')
         if os.path.isdir(object):
             shutil.rmtree(object)
             conn.send("OK")
@@ -91,10 +94,30 @@ class Node(object):
                 conn.send("INVALID_COMMAND")
             conn.close()
         except Exception as e:
-            conn.send("ERR")
+            conn.send("ERR "+str(e))
             conn.close()
 
-    def __init__(self, dir):
+    def _advertise_data(self, host, port, ds_host, ds_port):
+        print "Advertising to Directory Server..."
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((ds_host, ds_port))
+        s.send("ADVERTISE "+host+" "+str(port))
+        data = s.recv(1024)
+        if data != "OK":
+            print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
+        # repeatedly send advertisement messages of the structure of the server filesystem
+        for (dirpath, dirnames, filenames) in os.walk(self._dir):
+            dict = {'dirpath': self._relative_path(self._dir, dirpath), 'dirnames': dirnames, 'filenames': filenames}
+            s.send(json.dumps(dict))
+            data = s.recv(1024)
+            if data != "OK":
+                print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
+        s.close()
+        print "Advertisement complete: Node and Directory Server in sync."
+
+    def __init__(self, dir, host, port, ds_host, ds_port):
         self._dir = dir
-        self._server = TCPServer(8001, 10, self._request_handler)
+        self._advertise_data(host, port, ds_host, ds_port)
+        self._server = TCPServer(port, 10, self._request_handler)
         self._server.start()
+        print "Node server started successfully."
