@@ -1,5 +1,7 @@
 import thread, Queue, socket, sys, os, signal
 
+from utils.ConnectionHelper import ConnectionHelper
+
 class TCPServer(object):
 
     _queue = Queue.Queue()  # incoming connection queue
@@ -54,5 +56,6 @@ class TCPServer(object):
                 break
 
             conn, addr = v
+            conn_obj = ConnectionHelper(conn)
             # call the callback in a new (detached) thread so this consumer can continue
-            thread.start_new(self._callback, (conn,))
+            thread.start_new(self._callback, (conn_obj,))
