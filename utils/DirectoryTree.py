@@ -9,15 +9,19 @@ import threading
 
 class File:
 
-    def __init__(self, name, location):
+    def __init__(self, name, location, host, port):
         self.name = name
         self.location = location
+        self.host = host
+        self.port = port
 
 class Directory:
 
-    def __init__(self, name, location):
+    def __init__(self, name, location, host, port):
         self.name = name
         self.location = location
+        self.host = host
+        self.port = port
         self.children = []
 
     def get_child(self, name):
@@ -34,23 +38,23 @@ class DirectoryTree:
     def __init__(self):
         # initialise the root directory, it has no name or location (it's
         # not stored anywhere, it's fragmented across multiple nodes)
-        self._root = Directory("", "")
+        self._root = Directory("", "", "", 0)
         self._lock = threading.Lock()
 
-    def _add_item(self, Type, name, location):
+    def _add_item(self, Type, name, location, host, port):
         parent = self.find(location)
         # only add an item if it does not already exist in the structure
         if parent.get_child(name) is None:
-            parent.add_child(Type(name, location))
+            parent.add_child(Type(name, location, host, port))
 
-    def _add_file(self, name, location):
+    def _add_file(self, name, location, host, port):
         self._lock.acquire()
-        self._add_item(File, name, location)
+        self._add_item(File, name, location, host, port)
         self._lock.release()
 
-    def _add_directory(self, name, location):
+    def _add_directory(self, name, location, host, port):
         self._lock.acquire()
-        self._add_item(Directory, name, location)
+        self._add_item(Directory, name, location, host, port)
         self._lock.release()
 
     def find(self, path):
@@ -67,13 +71,13 @@ class DirectoryTree:
         if node is None:
             return
         for filename in filenames:
-            self._add_file(filename, dirpath)
+            self._add_file(filename, dirpath, host, port)
         for dirname in dirnames:
-            self._add_directory(dirname, dirpath)
+            self._add_directory(dirname, dirpath, host, port)
 
     def _r_pretty_print(self, node, level):
         for item in node.children:
-            print str(' '*level) + item.name
+            print str(' '*level) + item.name + ", " + item.location + " @ " + item.host + ":" + item.port
             if isinstance(item, Directory):
                 self._r_pretty_print(item, level+2)
 
