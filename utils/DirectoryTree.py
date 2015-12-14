@@ -7,7 +7,8 @@ objects. Everything is stored in memory
 
 import threading
 
-class File:
+
+class File(object):
 
     def __init__(self, name, location, host, port):
         self.name = name
@@ -15,13 +16,11 @@ class File:
         self.host = host
         self.port = port
 
-class Directory:
+
+class Directory(File):
 
     def __init__(self, name, location, host, port):
-        self.name = name
-        self.location = location
-        self.host = host
-        self.port = port
+        super(self.__class__, self).__init__(name, location, host, port)
         self.children = []
 
     def get_child(self, name):
@@ -32,6 +31,7 @@ class Directory:
 
     def add_child(self, obj):
         self.children.append(obj)
+
 
 class DirectoryTree:
 
@@ -77,7 +77,11 @@ class DirectoryTree:
 
     def _r_pretty_print(self, node, level):
         for item in node.children:
-            print str(' '*level) + item.name + ", " + item.location + " @ " + item.host + ":" + item.port
+            if item.location == "":
+                loc = "/"
+            else:
+                loc = item.location
+            print str(' '*level) + item.name + ", " + loc + " @ " + item.host + ":" + item.port
             if isinstance(item, Directory):
                 self._r_pretty_print(item, level+2)
 
