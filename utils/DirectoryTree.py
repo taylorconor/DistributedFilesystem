@@ -85,7 +85,7 @@ class DirectoryTree:
     def _r_pretty_print(self, node, level):
         for item in node.children:
             if item.location.diskloc == "":
-                loc = "/"Switchi
+                loc = "/"
             else:
                 loc = item.location.diskloc
             print str(' '*level) + item.name + ", " + loc + " @ " + item.location.host + ":" + item.location.port
