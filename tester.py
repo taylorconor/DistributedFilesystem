@@ -4,7 +4,7 @@ def requester(host, port, message):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((host, port))
     # send the request using the socket
-    s.send(message+"\n")
+    s.send(message)
     # recieve up to 1024 bytes from the remote server
     data = s.recv(1024)
     print(data)
