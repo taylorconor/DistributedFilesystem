@@ -4,7 +4,7 @@ import shutil
 import json
 
 from utils.TCPServer import TCPServer
-from utils.DirectoryTree import DirectoryTree
+import utils.DirectoryTree as DT
 
 class DirectoryServer:
 
@@ -22,7 +22,19 @@ class DirectoryServer:
         if node is None:
             conn.send("NO_EXIST")
         else:
-            conn.send(node.location)
+            conn.send(node.location.host+":"+node.location.port+" "+node.location.diskloc+"/"+node.name)
+
+    def _list_handler(self, conn, location):
+        node = self._tree.find(location)
+        if node is None:
+            conn.send("NO_EXIST")
+        elif not isinstance(node, DT.Directory):
+            conn.send("CANT_LIST_FILE")
+        else:
+            children = []
+            for child in node.children:
+                children.append(child.name)
+            conn.send(str(children))
 
     def _request_handler(self, conn):
         try:
@@ -34,8 +46,10 @@ class DirectoryServer:
             if input[0] == "ADVERTISE":
                 self._advertise_handler(conn, input[1], input[2])
                 print "Received ADVERTISE from "+input[1]+":"+input[2]
-            if input[0] == "GET":
+            elif input[0] == "GET":
                 self._get_handler(conn, input[1])
+            elif input[0] == "LIST":
+                self._list_handler(conn, input[1])
             # FOR TESTING ONLY
             elif input[0] == "PRINT":
                 self._tree.pretty_print()
@@ -50,5 +64,5 @@ class DirectoryServer:
     def __init__(self, port):
         self._port = port
         self._server = TCPServer(self._port, 10, self._request_handler)
-        self._tree = DirectoryTree()
+        self._tree = DT.DirectoryTree()
         self._server.start()
