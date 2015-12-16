@@ -3,33 +3,34 @@ import errno
 import shutil
 import json
 
+from utils.Constants import Response
 from utils.TCPServer import TCPServer
 import utils.DirectoryTree as DT
 
 class DirectoryServer:
 
     def _advertise_handler(self, conn, host, port):
-        conn.send("OK")
+        conn.send(Response.OK)
         data = conn.recv(8096)
         while data:
             data = json.loads(data)
             self._tree.add(host, port, data["dirnames"], data["filenames"], data["dirpath"])
-            conn.send("OK")
+            conn.send(Response.OK)
             data = conn.recv(8096)
 
     def _get_handler(self, conn, location):
         node = self._tree.find(location)
         if node is None:
-            conn.send("NO_EXIST")
+            conn.send(Response.NO_EXIST)
         else:
             conn.send(node.location.host+":"+node.location.port+" "+node.location.diskloc+"/"+node.name)
 
     def _list_handler(self, conn, location):
         node = self._tree.find(location)
         if node is None:
-            conn.send("NO_EXIST")
+            conn.send(Response.NO_EXIST)
         elif not isinstance(node, DT.Directory):
-            conn.send("CANT_LIST_FILE")
+            conn.send(Response.CANT_LIST)
         else:
             children = []
             for child in node.children:
@@ -58,7 +59,7 @@ class DirectoryServer:
             conn.close()
         except Exception as e:
             print str(e)
-            conn.send("ERR")
+            conn.send(Response.ERROR)
             conn.close()
 
     def __init__(self, port):
