@@ -53,7 +53,7 @@ class DirectoryServer:
                 self._list_handler(conn, input[1])
             # FOR TESTING ONLY
             elif input[0] == "PRINT":
-                self._tree.pretty_print()
+                self._tree.pretty_print(input[1])
             else:
                 conn.send("INVALID_COMMAND")
             conn.close()

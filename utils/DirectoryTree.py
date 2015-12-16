@@ -86,11 +86,15 @@ class DirectoryTree:
 
     def find(self, path):
         path = path.strip('/').split('/')
+        if path[0] == '':
+            return self._root
         node = self._root
         for item in path:
             tnode = node.get_child(item)
             if tnode is not None:
                 node = tnode
+            else:
+                return None
         return node
 
     def add(self, host, port, dirnames, filenames, dirpath):
@@ -110,9 +114,13 @@ class DirectoryTree:
                 new_path = path + item.name + "/"
                 self._r_pretty_print(item, level+2, new_path)
 
-    def pretty_print(self):
-        print "\n*** PRINTING ENTIRE DIRECTORY STRUCTURE ***"
-        print "/"   # represent the root directory with a slash
-        self._r_pretty_print(self._root, 2, "/")
-        print "*******************************************\n"
-
+    def pretty_print(self, path):
+        path = path.strip()
+        node = self.find(path)
+        if node is None:
+            print "PRINT: path " + path + " does not exist."
+            return
+        print "\n*** PRINTING DIRECTORY STRUCTURE FROM " + path + " ***"
+        print path
+        self._r_pretty_print(node, 2, path)
+        print "**************************************" + "*"*len(path) + "****\n"
