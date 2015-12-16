@@ -10,17 +10,34 @@ import threading
 
 class Location:
 
-    def __init__(self, diskloc, host, port):
-        self.diskloc = diskloc
+    def __init__(self, host, port):
         self.host = host
         self.port = port
+
+    def compare(self, other_loc):
+        if self.host != other_loc.host or self.port != other_loc.port:
+            return False
+        return True
 
 
 class File(object):
 
     def __init__(self, name, location):
         self.name = name
-        self.location = location
+        self.location = [location]
+
+    def add_location(self, new_loc):
+        # add this location to the location list, if it's not already there
+        for loc in self.location:
+            if loc.compare(new_loc):
+                return
+        self.location.append(new_loc)
+
+    def locations(self):
+        tmp_loc = []
+        for loc in self.location:
+            tmp_loc.append(loc.host + ":" + loc.port)
+        return tmp_loc
 
 
 class Directory(File):
@@ -44,23 +61,27 @@ class DirectoryTree:
     def __init__(self):
         # initialise the root directory, it has no name or location (it's
         # not stored anywhere, it's fragmented across multiple nodes)
-        self._root = Directory("", Location("", "", ""))
+        self._root = Directory("", Location("", 0))
         self._lock = threading.Lock()
 
-    def _add_item(self, Type, name, location):
-        parent = self.find(location.diskloc)
+    def _add_item(self, Type, name, location, path):
+        parent = self.find(path)
         # only add an item if it does not already exist in the structure
-        if parent.get_child(name) is None:
+        child = parent.get_child(name)
+        if child is None:
             parent.add_child(Type(name, location))
+        # otherwise, add this location to the list of locations where this item can be found
+        else:
+            child.add_location(location)
 
-    def _add_file(self, name, location):
+    def _add_file(self, name, location, path):
         self._lock.acquire()
-        self._add_item(File, name, location)
+        self._add_item(File, name, location, path)
         self._lock.release()
 
-    def _add_directory(self, name, location):
+    def _add_directory(self, name, location, path):
         self._lock.acquire()
-        self._add_item(Directory, name, location)
+        self._add_item(Directory, name, location, path)
         self._lock.release()
 
     def find(self, path):
@@ -74,27 +95,24 @@ class DirectoryTree:
 
     def add(self, host, port, dirnames, filenames, dirpath):
         node = self.find(dirpath)
-        location = Location(dirpath, host, port)
+        location = Location(host, port)
         if node is None:
             return
         for filename in filenames:
-            self._add_file(filename, location)
+            self._add_file(filename, location, dirpath)
         for dirname in dirnames:
-            self._add_directory(dirname, location)
+            self._add_directory(dirname, location, dirpath)
 
-    def _r_pretty_print(self, node, level):
+    def _r_pretty_print(self, node, level, path):
         for item in node.children:
-            if item.location.diskloc == "":
-                loc = "/"
-            else:
-                loc = item.location.diskloc
-            print str(' '*level) + item.name + ", " + loc + " @ " + item.location.host + ":" + item.location.port
+            print str(' '*level) + item.name + ", " + path + " @ " + str(item.locations())
             if isinstance(item, Directory):
-                self._r_pretty_print(item, level+2)
+                new_path = path + item.name + "/"
+                self._r_pretty_print(item, level+2, new_path)
 
     def pretty_print(self):
         print "\n*** PRINTING ENTIRE DIRECTORY STRUCTURE ***"
         print "/"   # represent the root directory with a slash
-        self._r_pretty_print(self._root, 2)
+        self._r_pretty_print(self._root, 2, "/")
         print "*******************************************\n"
 
