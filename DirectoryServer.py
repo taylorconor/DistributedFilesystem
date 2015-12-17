@@ -22,9 +22,15 @@ class DirectoryServer:
         node = self._tree.find(location)
         if node is None:
             conn.send(Response.NO_EXIST)
+        elif isinstance(node, DT.Directory):
+            conn.send(Response.IS_DIRECTORY)
         else:
-            conn.send(node.location.host+":"+node.location.port+" "+node.location.diskloc+"/"+node.name)
+            conn.send(str(node.locations())+" "+location)
 
+    def _put_handler(self, conn, location):
+        pass
+    def _mkdir_handler(self, conn, location):
+        pass
     def _list_handler(self, conn, location):
         node = self._tree.find(location)
         if node is None:
@@ -49,6 +55,10 @@ class DirectoryServer:
                 print "Received ADVERTISE from "+input[1]+":"+input[2]
             elif input[0] == "GET":
                 self._get_handler(conn, input[1])
+            elif input[0] == "PUT":
+                self._put_handler(conn, input[1])
+            elif input[0] == "MKDIR":
+                self._mkdir_handler(conn, input[1])
             elif input[0] == "LIST":
                 self._list_handler(conn, input[1])
             # FOR TESTING ONLY

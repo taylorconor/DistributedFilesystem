@@ -61,7 +61,7 @@ class DirectoryTree:
     def __init__(self):
         # initialise the root directory, it has no name or location (it's
         # not stored anywhere, it's fragmented across multiple nodes)
-        self._root = Directory("", Location("", 0))
+        self._root = Directory("", Location("", ""))
         self._lock = threading.Lock()
 
     def _add_item(self, Type, name, location, path):
