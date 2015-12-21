@@ -9,9 +9,23 @@ import errno
 import shutil
 import socket
 import json
+import thread
 
 from utils.TCPServer import TCPServer
 from utils.Constants import Response
+
+
+class Advertisement:
+
+    def __init__(self, dirpath, dirnames, filenames):
+        self.dirpath = dirpath
+        self.dirnames = dirnames
+        self.filenames = filenames
+
+    def toJSON(self):
+        dict = {'dirpath': self.dirpath, 'dirnames': self.dirnames, 'filenames': self.filenames}
+        return json.dumps(dict)
+
 
 class Node(object):
 
@@ -42,10 +56,17 @@ class Node(object):
             conn.send(Response.NO_EXIST)
         else:
             conn.send(Response.OK)
+            # check if the file existed or not before overwriting
+            exists = os.path.isfile(self._dir + input)
             f = open(self._dir + input, "wb")
             conn.recv_file(f)
             f.close()
             conn.send(Response.OK)
+
+            # TODO: send to replication manager
+            if not exists:
+                pass
+                # TODO: add to advertisement buffer
 
     # MKDIR creates a directory in the node
     def _mkdir_handler(self, conn, input):
@@ -57,6 +78,8 @@ class Node(object):
             try:
                 os.makedirs(newdir)
                 conn.send(Response.OK)
+                # TODO: send to replication manager
+                # TODO: add to advertisement buffer
             except Exception as e:
                 if e.errno != errno.EEXIST:
                     raise
@@ -116,8 +139,8 @@ class Node(object):
             print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
         # repeatedly send advertisement messages of the structure of the server filesystem
         for (dirpath, dirnames, filenames) in os.walk(self._dir):
-            dict = {'dirpath': self._relative_path(self._dir, dirpath), 'dirnames': dirnames, 'filenames': filenames}
-            s.send(json.dumps(dict))
+            advertisement = Advertisement(self._relative_path(self._dir, dirpath), dirnames, filenames)
+            s.send(advertisement.toJSON())
             data = s.recv(1024)
             if data != Response.OK:
                 print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
@@ -126,6 +149,7 @@ class Node(object):
 
     def __init__(self, dir, host, port, ds_host, ds_port):
         self._dir = dir
+        # do an initial (full) advertisement before the node is fully set up
         self._advertise_data(host, port, ds_host, ds_port)
         self._server = TCPServer(port, 10, self._request_handler)
         self._server.start()
