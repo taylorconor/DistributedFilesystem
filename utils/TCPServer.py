@@ -1,4 +1,9 @@
-import thread, Queue, socket, sys, os, signal
+import threading
+import Queue
+import socket
+import sys
+import os
+import signal
 
 from utils.ConnectionHelper import ConnectionHelper
 
@@ -19,7 +24,9 @@ class TCPServer(object):
         self._bind()
         self._createPool()
         # run the listener in a new (detached) thread
-        thread.start_new(self._listen, ())
+        t = threading.Thread(target=self._listen, args=())
+        t.daemon = True
+        t.start()
 
     # stop the listener threads by filling the connection queue with None (which the threads will interpret as kill)
     def stop(self):
@@ -29,7 +36,9 @@ class TCPServer(object):
     # initialise the thread pool
     def _createPool(self):
         for i in range(self._threads):
-            t = thread.start_new(self._consumer, (i,))
+            t = threading.Thread(target=self._consumer, args=(i,))
+            t.daemon = True
+            t.start()
             self._pool.append(t)
 
     # bind socket to port
@@ -58,4 +67,6 @@ class TCPServer(object):
             conn, addr = v
             conn_obj = ConnectionHelper(conn)
             # call the callback in a new (detached) thread so this consumer can continue
-            thread.start_new(self._callback, (conn_obj,))
+            t = threading.Thread(target=self._callback, args=(conn_obj,))
+            t.daemon = True
+            t.start()

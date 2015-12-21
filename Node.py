@@ -9,10 +9,11 @@ import errno
 import shutil
 import socket
 import json
-import thread
+import threading
 
 from utils.TCPServer import TCPServer
 from utils.Constants import Response
+from utils.ObjectBuffer import ObjectBuffer
 
 
 class Advertisement:
@@ -147,10 +148,17 @@ class Node(object):
         s.close()
         print "Advertisement complete: Node and Directory Server in sync."
 
+    def _incremental_advertise(self, host, port, ds_host, ds_port):
+        pass
+
     def __init__(self, dir, host, port, ds_host, ds_port):
         self._dir = dir
+        self._advertise_buffer = ObjectBuffer()
         # do an initial (full) advertisement before the node is fully set up
         self._advertise_data(host, port, ds_host, ds_port)
         self._server = TCPServer(port, 10, self._request_handler)
+        t = threading.Thread(target=self._incremental_advertise, args=(host, port, ds_host, ds_port,))
+        t.daemon = True
+        t.start()
         self._server.start()
         print "Node server started successfully."
