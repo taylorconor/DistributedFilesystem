@@ -23,4 +23,9 @@ class _Response(object):
     @constant
     def ERROR():            return "ERROR"              # Server encountered an error, request not completed
 
+class _Interval(object):
+    @constant
+    def ADVERTISE():        return 1                    # Propagate Advertise incremental updates every second
+
 Response = _Response()
+Interval = _Interval()

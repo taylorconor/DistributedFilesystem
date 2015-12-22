@@ -8,24 +8,13 @@ import os
 import errno
 import shutil
 import socket
-import json
 import threading
+import time
 
 from utils.TCPServer import TCPServer
-from utils.Constants import Response
+from utils.Constants import Response, Interval
 from utils.ObjectBuffer import ObjectBuffer
-
-
-class Advertisement:
-
-    def __init__(self, dirpath, dirnames, filenames):
-        self.dirpath = dirpath
-        self.dirnames = dirnames
-        self.filenames = filenames
-
-    def toJSON(self):
-        dict = {'dirpath': self.dirpath, 'dirnames': self.dirnames, 'filenames': self.filenames}
-        return json.dumps(dict)
+from utils.Advertisement import Advertisement
 
 
 class Node(object):
@@ -66,8 +55,7 @@ class Node(object):
 
             # TODO: send to replication manager
             if not exists:
-                pass
-                # TODO: add to advertisement buffer
+                self._advertise_buffer.add(input)
 
     # MKDIR creates a directory in the node
     def _mkdir_handler(self, conn, input):
@@ -79,8 +67,8 @@ class Node(object):
             try:
                 os.makedirs(newdir)
                 conn.send(Response.OK)
+                self._advertise_buffer.add(input.strip('/'), False)
                 # TODO: send to replication manager
-                # TODO: add to advertisement buffer
             except Exception as e:
                 if e.errno != errno.EEXIST:
                     raise
@@ -149,11 +137,43 @@ class Node(object):
         print "Advertisement complete: Node and Directory Server in sync."
 
     def _incremental_advertise(self, host, port, ds_host, ds_port):
-        pass
+        while True:
+            # sleep on condition variable
+            self._advertise_cv.acquire()
+            while self._advertise_buffer.isEmpty():
+                self._advertise_cv.wait()
+                self._advertise_cv.release()
+                time.sleep(Interval.ADVERTISE)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.connect((ds_host, ds_port))
+            except Exception as e:
+                if e.errno == errno.ECONNREFUSED:
+                    print "*!* ERROR: Unable to connect to Directory Server!"
+                    print "*!* Node and Directory Server are *NOT* in sync!"
+                else:
+                    print e
+                return
+            s.send("ADVERTISE "+host+" "+str(port))
+            data = s.recv(1024)
+            if data != Response.OK:
+                print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
+            self._advertise_cv.acquire()
+            messages = self._advertise_buffer.getAllAdvertisements()
+            for message in messages:
+                s.send(message.toJSON())
+                data = s.recv(1024)
+                if data != Response.OK:
+                    print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
+            self._advertise_buffer.clear()
+            self._advertise_cv.release()
+            s.close()
+            print "Advertisement complete: Node and Directory Server in sync."
 
     def __init__(self, dir, host, port, ds_host, ds_port):
         self._dir = dir
-        self._advertise_buffer = ObjectBuffer()
+        self._advertise_cv = threading.Condition()
+        self._advertise_buffer = ObjectBuffer(self._advertise_cv)
         # do an initial (full) advertisement before the node is fully set up
         self._advertise_data(host, port, ds_host, ds_port)
         self._server = TCPServer(port, 10, self._request_handler)
