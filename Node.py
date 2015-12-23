@@ -59,12 +59,13 @@ class Node(object):
 
     # MKDIR creates a directory in the node
     def _mkdir_handler(self, conn, input):
-        newdir = str(self._dir + input).strip('/')
+        newdir = str(self._dir + input.strip('/'))
         basedir = os.path.dirname(newdir)
         if not os.path.isdir(basedir):
             conn.send(Response.NO_EXIST)
         else:
             try:
+
                 os.makedirs(newdir)
                 conn.send(Response.OK)
                 self._advertise_buffer.add(input.strip('/'), False)
@@ -172,6 +173,9 @@ class Node(object):
 
     def __init__(self, dir, host, port, ds_host, ds_port):
         self._dir = dir
+        # append a slash to the end of the home directory if it's not passed in
+        if self._dir[len(self._dir)-1] != '/':
+            self._dir += '/'
         self._advertise_cv = threading.Condition()
         self._advertise_buffer = ObjectBuffer(self._advertise_cv)
         # do an initial (full) advertisement before the node is fully set up
