@@ -6,6 +6,7 @@ objects. Everything is stored in memory
 """
 
 import threading
+import os
 
 
 class Location:
@@ -55,6 +56,12 @@ class Directory(File):
     def add_child(self, obj):
         self.children.append(obj)
 
+    def remove_child(self, obj):
+        new_children = []
+        for child in self.children:
+            if child.name != obj:
+                new_children.append(child)
+        self.children = new_children
 
 class DirectoryTree:
 
@@ -84,6 +91,15 @@ class DirectoryTree:
         self._add_item(Directory, name, location, path)
         self._lock.release()
 
+    def _delete_item(self, item):
+        self._lock.acquire()
+        parent_dir = os.path.dirname(item.rstrip('/'))
+        child = item[len(parent_dir):].strip('/')
+        parent = self.find(parent_dir)
+        if parent is not None:
+            parent.remove_child(child)
+        self._lock.release()
+
     def find(self, path):
         path = path.strip('/').split('/')
         if path[0] == '':
@@ -97,7 +113,7 @@ class DirectoryTree:
                 return None
         return node
 
-    def add(self, host, port, dirnames, filenames, dirpath):
+    def add(self, host, port, dirnames, filenames, dirpath, deletelist):
         node = self.find(dirpath)
         location = Location(host, port)
         if node is None:
@@ -106,6 +122,8 @@ class DirectoryTree:
             self._add_file(filename, location, dirpath)
         for dirname in dirnames:
             self._add_directory(dirname, location, dirpath)
+        for item in deletelist:
+            self._delete_item(item)
 
     def _r_pretty_print(self, node, level, path):
         for item in node.children:

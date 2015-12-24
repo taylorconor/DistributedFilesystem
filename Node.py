@@ -55,7 +55,7 @@ class Node(object):
 
             # TODO: send to replication manager
             if not exists:
-                self._advertise_buffer.add(input)
+                self._advertise_buffer.add(input, ObjectBuffer.Type.file)
 
     # MKDIR creates a directory in the node
     def _mkdir_handler(self, conn, input):
@@ -68,7 +68,7 @@ class Node(object):
 
                 os.makedirs(newdir)
                 conn.send(Response.OK)
-                self._advertise_buffer.add(input.strip('/'), False)
+                self._advertise_buffer.add(input.strip('/'), ObjectBuffer.Type.directory)
                 # TODO: send to replication manager
             except Exception as e:
                 if e.errno != errno.EEXIST:
@@ -78,13 +78,15 @@ class Node(object):
 
     # DELETE deletes a file or directory *recursively* in the node
     def _delete_handler(self, conn, input):
-        object = str(self._dir + input).strip('/')
+        object = str(self._dir + input).rstrip('/')
         if os.path.isdir(object):
             shutil.rmtree(object)
             conn.send(Response.OK)
+            self._advertise_buffer.add(input, ObjectBuffer.Type.deleteDirectory)
         elif os.path.isfile(object):
             os.remove(object)
             conn.send(Response.OK)
+            self._advertise_buffer.add(input, ObjectBuffer.Type.deleteFile)
         else:
             conn.send(Response.NO_EXIST)
 
@@ -140,8 +142,8 @@ class Node(object):
     def _incremental_advertise(self, host, port, ds_host, ds_port):
         while True:
             # sleep on condition variable
-            self._advertise_cv.acquire()
             while self._advertise_buffer.isEmpty():
+                self._advertise_cv.acquire()
                 self._advertise_cv.wait()
                 self._advertise_cv.release()
                 time.sleep(Interval.ADVERTISE)

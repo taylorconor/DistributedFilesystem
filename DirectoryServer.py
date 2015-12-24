@@ -14,7 +14,7 @@ class DirectoryServer:
         data = conn.recv(8096)
         while data:
             data = json.loads(data)
-            self._tree.add(host, port, data["dirnames"], data["filenames"], data["dirpath"])
+            self._tree.add(host, port, data["dirnames"], data["filenames"], data["dirpath"], data["deletelist"])
             conn.send(Response.OK)
             data = conn.recv(8096)
 

@@ -9,6 +9,12 @@ from utils.Advertisement import Advertisement
 
 class ObjectBuffer:
 
+    class Type:
+        file = 0
+        directory = 1
+        deleteFile = 2
+        deleteDirectory = 3
+
     def __init__(self, cv):
         self._buf = []
         self._cv = cv
@@ -18,7 +24,10 @@ class ObjectBuffer:
             if item.dirpath == dirpath:
                 return
         parent = os.path.dirname(dirpath.strip('/'))
-        self._buf.append(Advertisement(parent, [dirpath], []))
+        child = dirpath
+        if child.startswith(parent):
+            child = child[len(parent):].strip('/')
+        self._buf.append(Advertisement(parent, [child], []))
         self._buf.append(Advertisement(dirpath, [], []))
 
     def _add_file(self, filename):
@@ -30,13 +39,36 @@ class ObjectBuffer:
         adv = Advertisement(dirpath, [], [filename.lstrip(dirpath).lstrip('/')])
         self._buf.append(adv)
 
-    def add(self, item, isFile=True):
+    def _add_delete_file(self, delete_item):
+        dirpath = os.path.dirname(delete_item)
+        for item in self._buf:
+            if item.dirpath == dirpath:
+                item.addDelete(item)
+                return
+        adv = Advertisement(dirpath, [], [], [delete_item])
+        self._buf.append(adv)
+
+    def _add_delete_dir(self, delete_item):
+        # search for a directory who has the directory to be deleted as a child.
+        parent = os.path.dirname(delete_item.rstrip('/'))
+        for item in self._buf:
+            if item.dirpath == parent:
+                item.addDelete(delete_item)
+                return
+        adv = Advertisement(parent, [], [], [delete_item])
+        self._buf.append(adv)
+
+    def add(self, item, type):
         if item not in self._buf:
             self._cv.acquire()
-            if isFile:
+            if type == self.Type.file:
                 self._add_file(item)
-            else:
+            elif type == self.Type.directory:
                 self._add_dir(item)
+            elif type == self.Type.deleteFile:
+                self._add_delete_file(item)
+            elif type == self.Type.deleteDirectory:
+                self._add_delete_dir(item)
             self._cv.notify()
             self._cv.release()
 
