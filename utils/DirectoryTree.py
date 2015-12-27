@@ -7,6 +7,7 @@ objects. Everything is stored in memory
 
 import threading
 import os
+import random
 
 
 class Location:
@@ -39,6 +40,11 @@ class File(object):
         for loc in self.location:
             tmp_loc.append(loc.host + ":" + loc.port)
         return tmp_loc
+
+    def random_loc(self):
+        max = len(self.location)-1
+        num = random.randint(0, max)
+        return self.location[num].host + ":" + self.location[num].port
 
 
 class Directory(File):

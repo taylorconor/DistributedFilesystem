@@ -25,12 +25,14 @@ class DirectoryServer:
         elif isinstance(node, DT.Directory):
             conn.send(Response.IS_DIRECTORY)
         else:
-            conn.send(str(node.locations())+" "+location)
+            conn.send(node.random_loc()+" "+location)
 
     def _put_handler(self, conn, location):
         pass
+
     def _mkdir_handler(self, conn, location):
         pass
+
     def _list_handler(self, conn, location):
         node = self._tree.find(location)
         if node is None:
