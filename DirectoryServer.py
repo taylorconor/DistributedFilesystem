@@ -9,6 +9,11 @@ import utils.DirectoryTree as DT
 
 class DirectoryServer:
 
+    def _sanitise_location(self, loc):
+        if not loc.startswith('/'):
+            loc = '/' + loc
+        return loc.rstrip('/')
+
     def _advertise_handler(self, conn, host, port):
         conn.send(Response.OK)
         data = conn.recv(8096)
@@ -25,16 +30,45 @@ class DirectoryServer:
         elif isinstance(node, DT.Directory):
             conn.send(Response.IS_DIRECTORY)
         else:
-            conn.send(node.random_loc()+" "+location)
+            conn.send(Response.OK + " " + node.random_loc()+" "+location)
 
     def _put_handler(self, conn, location):
-        pass
+        location = self._sanitise_location(location)
+        parent = os.path.dirname(location)
+        pnode = self._tree.find(parent)
+        if pnode is None:
+            conn.send(Response.ERROR)
+            return
+
+        child = self._tree.find(location)
+        if child is None:
+            # pick the server with the least amount of objects in the hierarchy
+            loc = pnode.hlocs[len(pnode.hlocs)-1]
+            conn.send(Response.OK + " " + loc.get_string())
+            return
+
+        # pick a random (existing) child location
+        conn.send(Response.OK + " " + child.random_loc())
 
     def _mkdir_handler(self, conn, location):
-        pass
+        location = self._sanitise_location(location)
+        parent = os.path.dirname(location)
+        child = location[len(parent)-1:].strip('/')
+        pnode = self._tree.find(parent)
+        if pnode is None:
+            conn.send(Response.ERROR)
+            return
+
+        if pnode.get_child(child) is not None:
+            conn.send(Response.EXISTS)
+            return
+
+        # pick the server with the least amount of objects in the hierarchy
+        loc = pnode.hlocs[len(pnode.hlocs)-1]
+        conn.send(Response.OK + " " + loc.get_string())
 
     def _list_handler(self, conn, location):
-        node = self._tree.find(location)
+        node = self._trexe.find(location)
         if node is None:
             conn.send(Response.NO_EXIST)
         elif not isinstance(node, DT.Directory):

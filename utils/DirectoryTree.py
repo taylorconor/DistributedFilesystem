@@ -8,6 +8,7 @@ objects. Everything is stored in memory
 import threading
 import os
 import random
+import copy
 
 
 class Location:
@@ -15,18 +16,23 @@ class Location:
     def __init__(self, host, port):
         self.host = host
         self.port = port
+        self.count = 0
 
     def compare(self, other_loc):
         if self.host != other_loc.host or self.port != other_loc.port:
             return False
         return True
 
+    def get_string(self):
+        return self.host + ":" + self.port
+
 
 class File(object):
 
-    def __init__(self, name, location):
+    def __init__(self, name, location, parent):
         self.name = name
         self.location = [location]
+        self.parent = parent
 
     def add_location(self, new_loc):
         # add this location to the location list, if it's not already there
@@ -34,24 +40,26 @@ class File(object):
             if loc.compare(new_loc):
                 return
         self.location.append(new_loc)
+        self.parent.add_hloc(new_loc)
 
     def locations(self):
         tmp_loc = []
         for loc in self.location:
-            tmp_loc.append(loc.host + ":" + loc.port)
+            tmp_loc.append(loc.get_string())
         return tmp_loc
 
     def random_loc(self):
         max = len(self.location)-1
         num = random.randint(0, max)
-        return self.location[num].host + ":" + self.location[num].port
+        return self.location[num].get_string()
 
 
 class Directory(File):
 
-    def __init__(self, name, location):
-        super(self.__class__, self).__init__(name, location)
+    def __init__(self, name, location, parent):
+        super(self.__class__, self).__init__(name, location, parent)
         self.children = []
+        self.hlocs = []
 
     def get_child(self, name):
         for child in self.children:
@@ -61,6 +69,7 @@ class Directory(File):
 
     def add_child(self, obj):
         self.children.append(obj)
+        self.add_hloc(obj.location)
 
     def remove_child(self, obj):
         new_children = []
@@ -68,13 +77,56 @@ class Directory(File):
             if child.name != obj:
                 new_children.append(child)
         self.children = new_children
+        self.remove_hloc(obj.location)
+
+    def add_hloc(self, locs):
+        # if loc is not an array, put it into an array!
+        if not isinstance(locs, list):
+            print "adding loc: "+locs.get_string()
+            locs = [locs]
+
+        for loc in locs:
+            if loc is None:
+                continue
+            exists = False
+            for hloc in self.hlocs:
+                if hloc.compare(loc):
+                    hloc.count += 1
+                    exists = True
+                    self.hlocs.sort(key=lambda x: x.count, reverse=True)
+                    break
+
+            # add a new hloc if none exist
+            if not exists:
+                newloc = copy.deepcopy(loc)
+                self.hlocs.append(newloc)
+                print "adding loc: "+newloc.get_string()
+            # recursively add the hloc up the hierarchy, if we're not at the top already
+            if self.parent is not None:
+                self.parent.add_hloc(loc)
+
+    def remove_hloc(self, loc):
+        if loc is None:
+            return
+        for hloc in self.hlocs:
+            if hloc.compare(loc):
+                if hloc.count == 1:
+                    self.hlocs.remove(hloc)
+                else:
+                    hloc.count -= 1
+                    hloc.sort(key=lambda x: x.count, reverse=True)
+                # recursively remove the hloc up the hierarchy, if we're not at the top already
+                if self.parent is not None:
+                    self.parent.remove_hloc(loc)
+                return
+
 
 class DirectoryTree:
 
     def __init__(self):
         # initialise the root directory, it has no name or location (it's
         # not stored anywhere, it's fragmented across multiple nodes)
-        self._root = Directory("", Location("", ""))
+        self._root = Directory("", Location("", ""), None)
         self._lock = threading.Lock()
 
     def _add_item(self, Type, name, location, path):
@@ -82,7 +134,7 @@ class DirectoryTree:
         # only add an item if it does not already exist in the structure
         child = parent.get_child(name)
         if child is None:
-            parent.add_child(Type(name, location))
+            parent.add_child(Type(name, location, parent))
         # otherwise, add this location to the list of locations where this item can be found
         else:
             child.add_location(location)
