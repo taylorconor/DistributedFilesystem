@@ -27,5 +27,10 @@ class _Interval(object):
     @constant
     def ADVERTISE():        return 1                    # Propagate Advertise incremental updates every second
 
+class _Replication(object):
+    @constant
+    def SET_SIZE():         return 3                    # 3 nodes per replication set
+
 Response = _Response()
 Interval = _Interval()
+Replication = _Replication()
