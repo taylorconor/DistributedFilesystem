@@ -82,7 +82,6 @@ class Directory(File):
     def add_hloc(self, locs):
         # if loc is not an array, put it into an array!
         if not isinstance(locs, list):
-            print "adding loc: "+locs.get_string()
             locs = [locs]
 
         for loc in locs:
@@ -100,7 +99,6 @@ class Directory(File):
             if not exists:
                 newloc = copy.deepcopy(loc)
                 self.hlocs.append(newloc)
-                print "adding loc: "+newloc.get_string()
             # recursively add the hloc up the hierarchy, if we're not at the top already
             if self.parent is not None:
                 self.parent.add_hloc(loc)
