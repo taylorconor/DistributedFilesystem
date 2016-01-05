@@ -8,6 +8,7 @@ from utils.Constants import Response
 from utils.ReplicationController import ReplicationController
 from utils.DirectoryTree import Location
 
+
 class ReplicationManager():
 
     def _advertise_handler(self, conn, host, port):

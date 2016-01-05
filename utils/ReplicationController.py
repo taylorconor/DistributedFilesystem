@@ -1,5 +1,5 @@
 """
-ReplicationSet
+ReplicationManager
 
 """
 
@@ -7,6 +7,8 @@ import copy
 
 from utils.Constants import Replication
 
+
+# Manages a single replication set consisting of (on average) SET_SIZE amount of members
 class ReplicationSet:
 
     def __init__(self):
@@ -26,6 +28,7 @@ class ReplicationSet:
         self._members.append(location)
         return True
 
+    # removes the last element from the members list. this is because it doesn't matter which member is removed
     def remove(self):
         if self.size() == 0:
             return None
@@ -41,6 +44,7 @@ class ReplicationSet:
         return self._members
 
 
+# Controls a list of ReplicationSet objects
 class ReplicationController:
 
     def __init__(self):
@@ -57,15 +61,15 @@ class ReplicationController:
                     new_set.add(new_location)
             self._members.append(new_set)
         # otherwise, we can just add the host to the last replication set. the last replication set will always have
-        # a size of *at least* SET_SIZE, and *at most* (SET_SIZE*2)-1. this is to account for scenarios where the
-        # amount of hosts in the system is not divisible evenly by SET_SIZE
+        # a size of *at most* (SET_SIZE*2)-1, but should generally stabilize at SET_SIZE. this is to account for
+        # scenarios where the amount of hosts in the system is not evenly divisible by SET_SIZE.
         else:
             self._members[-1].add(location)
 
     def lookup(self, location):
         for member in self._members:
             if member.contains(location):
-                # make a deep copy of the membership list so the caller can't make permenant changes to it
+                # make a deep copy of the membership list so the caller can't make permanent changes to it
                 members_copy = copy.deepcopy(member.members())
                 return members_copy
         return None
