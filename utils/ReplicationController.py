@@ -3,6 +3,8 @@ ReplicationSet
 
 """
 
+import copy
+
 from utils.Constants import Replication
 
 class ReplicationSet:
@@ -60,8 +62,10 @@ class ReplicationController:
         else:
             self._members[-1].add(location)
 
-    def lookup(self, tuple):
+    def lookup(self, location):
         for member in self._members:
-            if member.contains(tuple):
-                return member.members()
+            if member.contains(location):
+                # make a deep copy of the membership list so the caller can't make permenant changes to it
+                members_copy = copy.deepcopy(member.members())
+                return members_copy
         return None

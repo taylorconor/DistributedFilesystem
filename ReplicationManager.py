@@ -5,7 +5,7 @@ Replication Manager
 
 from utils.TCPServer import TCPServer
 from utils.Constants import Response
-from utils.ReplicationSet import ReplicationController
+from utils.ReplicationController import ReplicationController
 from utils.DirectoryTree import Location
 
 class ReplicationManager():
@@ -18,7 +18,10 @@ class ReplicationManager():
     def _lookup_handler(self, conn, host, port):
         location = Location(host, port)
         set = self._replication_controller.lookup(location)
-        set.remove(location)    # don't include the requesting node in the response, it already knows it's in the set
+        for i in range(0, len(set)):
+            if set[i].compare(location):
+                del set[i]      # don't include the requesting node in the response, it already knows it's in the set
+                break
         str_set = ""            # a string representation of the response set
         for item in set:
             # convert each item in the response set to the string representation (easier to parse for the client)
