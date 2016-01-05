@@ -113,22 +113,28 @@ class Node(object):
             conn.send(Response.ERROR + " " + str(e))
             conn.close()
 
-    def _advertise_data(self, host, port, ds_host, ds_port):
-        print "Advertising to Directory Server..."
+    def _init_advertise(self, server, host, port, adv_host, adv_port):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            s.connect((ds_host, ds_port))
+            s.connect((adv_host, adv_port))
         except Exception as e:
             if e.errno == errno.ECONNREFUSED:
-                print "*!* ERROR: Unable to connect to Directory Server!"
-                print "*!* Node and Directory Server are *NOT* in sync!"
+                print "*!* ERROR: Unable to connect to " + server + "!"
+                print "*!* Node and " + server + " are *NOT* in sync!"
             else:
                 print e
-            return
+            return None
         s.send("ADVERTISE "+host+" "+str(port))
         data = s.recv(1024)
         if data != Response.OK:
-            print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
+            print "Received unusual response from " + server + ": " + data + ". Attempting to continue anyway."
+        return s
+
+    def _directory_server_advertisement(self, host, port, ds_host, ds_port):
+        print "Advertising to Directory Server..."
+        s = self._init_advertise("Directory Server", host, port, ds_host, ds_port)
+        if s is None:
+            return
         # repeatedly send advertisement messages of the structure of the server filesystem
         for (dirpath, dirnames, filenames) in os.walk(self._dir):
             advertisement = Advertisement(self._relative_path(self._dir, dirpath), dirnames, filenames)
@@ -139,6 +145,18 @@ class Node(object):
         s.close()
         print "Advertisement complete: Node and Directory Server in sync."
 
+    def _replication_manager_advertisement(self, host, port, rm_host, rm_port):
+        print "Advertising to Replication Manager..."
+        s = self._init_advertise("Replication Manager", host, port, rm_host, rm_port)
+        if s is None:
+            return
+        s.close()
+        print "Advertisement complete: Node and Replication Manager in sync."
+
+    def _full_advertise(self, host, port, ds_host, ds_port, rm_host, rm_port):
+        self._directory_server_advertisement(host, port, ds_host, ds_port)
+        self._replication_manager_advertisement(host, port, rm_host, rm_port)
+
     def _incremental_advertise(self, host, port, ds_host, ds_port):
         while True:
             # sleep on condition variable
@@ -147,20 +165,10 @@ class Node(object):
                 self._advertise_cv.wait()
                 self._advertise_cv.release()
                 time.sleep(Interval.ADVERTISE)
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try:
-                s.connect((ds_host, ds_port))
-            except Exception as e:
-                if e.errno == errno.ECONNREFUSED:
-                    print "*!* ERROR: Unable to connect to Directory Server!"
-                    print "*!* Node and Directory Server are *NOT* in sync!"
-                else:
-                    print e
+            # if the pc reaches here, this thread has been woken to send an incremental advertise and clear the buffer
+            s = self._init_advertise("Directory Server", host, port, ds_host, ds_port)
+            if s is None:
                 return
-            s.send("ADVERTISE "+host+" "+str(port))
-            data = s.recv(1024)
-            if data != Response.OK:
-                print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
             self._advertise_cv.acquire()
             messages = self._advertise_buffer.getAllAdvertisements()
             for message in messages:
@@ -173,15 +181,16 @@ class Node(object):
             s.close()
             print "Advertisement complete: Node and Directory Server in sync."
 
-    def __init__(self, dir, host, port, ds_host, ds_port):
+    def __init__(self, dir, host, port, ds_host, ds_port, rm_host, rm_port):
         self._dir = dir
         # append a slash to the end of the home directory if it's not passed in
         if self._dir[len(self._dir)-1] != '/':
             self._dir += '/'
         self._advertise_cv = threading.Condition()
         self._advertise_buffer = ObjectBuffer(self._advertise_cv)
-        # do an initial (full) advertisement before the node is fully set up
-        self._advertise_data(host, port, ds_host, ds_port)
+        # do an initial full advertisement (to the directory server and replication manager) before the threadpool init
+        self._full_advertise(host, port, ds_host, ds_port, rm_host, rm_port)
+        # now initialise the node's listening threadpool with 10 threads
         self._server = TCPServer(port, 10, self._request_handler)
         t = threading.Thread(target=self._incremental_advertise, args=(host, port, ds_host, ds_port,))
         t.daemon = True
