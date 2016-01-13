@@ -172,7 +172,7 @@ class Node(object):
         # repeatedly send advertisement messages of the structure of the server filesystem
         for (dirpath, dirnames, filenames) in os.walk(self._dir):
             advertisement = Advertisement(self._relative_path(self._dir, dirpath), dirnames, filenames)
-            s.send(advertisement.toJSON())
+            s.send(advertisement.to_json())
             data = s.recv(1024)
             if data != Response.OK:
                 print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."
@@ -206,7 +206,7 @@ class Node(object):
             self._advertise_cv.acquire()
             messages = self._advertise_buffer.get_all()
             for message in messages:
-                s.send(message.toJSON())
+                s.send(message.to_json())
                 data = s.recv(1024)
                 if data != Response.OK:
                     print "Received unusual response from Directory Server: "+data+". Attempting to continue anyway."

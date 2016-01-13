@@ -34,7 +34,7 @@ class ObjectBuffer:
         dirpath = os.path.dirname(filename)
         for item in self._buf:
             if item.dirpath == dirpath:
-                item.addFilename(filename)
+                item.add_filename(filename)
                 return
         adv = Advertisement(dirpath, [], [filename.lstrip(dirpath).lstrip('/')])
         self._buf.append(adv)
@@ -43,7 +43,7 @@ class ObjectBuffer:
         dirpath = os.path.dirname(delete_item)
         for item in self._buf:
             if item.dirpath == dirpath:
-                item.addDelete(item)
+                item.add_delete(item)
                 return
         adv = Advertisement(dirpath, [], [], [delete_item])
         self._buf.append(adv)
@@ -53,7 +53,7 @@ class ObjectBuffer:
         parent = os.path.dirname(delete_item.rstrip('/'))
         for item in self._buf:
             if item.dirpath == parent:
-                item.addDelete(delete_item)
+                item.add_delete(delete_item)
                 return
         adv = Advertisement(parent, [], [], [delete_item])
         self._buf.append(adv)

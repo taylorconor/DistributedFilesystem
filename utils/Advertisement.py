@@ -15,19 +15,21 @@ class Advertisement:
         self.filenames = filenames
         self.deletelist = deletelist
 
-    def addDirname(self, dirname):
+    def add_dirname(self, dirname):
         if dirname not in self.dirnames:
             self.dirnames.append(dirname)
 
-    def addFilename(self, filename):
+    def add_filename(self, filename):
         if filename not in self.filenames:
             self.filenames.append(filename)
 
-    def addDelete(self, item):
+    def add_delete(self, item):
+        if item.beginswith(self.dirpath):
+            item = item[len(self.dirpath):].strip('/')
         if item not in self.deletelist:
             self.deletelist.append(item)
 
-    def toJSON(self):
+    def to_json(self):
         dict = {'dirpath': self.dirpath, 'dirnames': self.dirnames,
                 'filenames': self.filenames, 'deletelist': self.deletelist}
         return json.dumps(dict)

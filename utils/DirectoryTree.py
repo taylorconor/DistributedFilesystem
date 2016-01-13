@@ -6,7 +6,6 @@ objects. Everything is stored in memory
 """
 
 import threading
-import os
 import random
 import copy
 
@@ -165,9 +164,8 @@ class DirectoryTree:
 
     def _delete_item(self, item, location, path):
         self._lock.acquire()
-        parent_dir = os.path.dirname(item.rstrip('/'))
-        parent = self.find(parent_dir)
-        child = parent.get_child(item[len(parent_dir):].strip('/'))
+        parent = self.find(path)
+        child = parent.get_child(item)
         if parent is not None:
             parent.remove_child(child, location)
         self._lock.release()
