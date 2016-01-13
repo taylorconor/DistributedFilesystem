@@ -1,4 +1,5 @@
 import os
+import sys
 import errno
 import shutil
 import json
@@ -104,7 +105,9 @@ class DirectoryServer:
                 conn.send("INVALID_COMMAND")
             conn.close()
         except Exception as e:
-            print str(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print exc_type.__name__ + " " + fname + ":" + str(exc_tb.tb_lineno) + " " + str(e)
             conn.send(Response.ERROR)
             conn.close()
 

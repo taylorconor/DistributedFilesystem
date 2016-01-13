@@ -42,6 +42,12 @@ class File(object):
         self.location.append(new_loc)
         self.parent.add_hloc(new_loc)
 
+    def remove_location(self, rem_loc):
+        for i in range(0, len(self.location)):
+            if self.location[i].compare(rem_loc):
+                del self.location[i]
+                return
+
     def locations(self):
         tmp_loc = []
         for loc in self.location:
@@ -71,11 +77,18 @@ class Directory(File):
         self.children.append(obj)
         self.add_hloc(obj.location)
 
-    def remove_child(self, obj):
+    def remove_child(self, obj, location):
         new_children = []
         for child in self.children:
-            if child.name != obj:
+            if child.name != obj.name:
                 new_children.append(child)
+            else:
+                # remove the current location from the child (since that replicant has deleted it's copy), but only
+                # retain the child if it's still stored somewhere, otherwise delete it completely
+                child.remove_location(location)
+                if len(child.locations()):
+                    new_children.append(child)
+
         self.children = new_children
         self.remove_hloc(obj.location)
 
@@ -103,20 +116,23 @@ class Directory(File):
             if self.parent is not None:
                 self.parent.add_hloc(loc)
 
-    def remove_hloc(self, loc):
-        if loc is None:
+    def remove_hloc(self, locs):
+        if locs is None:
             return
+        if not isinstance(locs, list):
+            locs = [locs]
         for hloc in self.hlocs:
-            if hloc.compare(loc):
-                if hloc.count == 1:
-                    self.hlocs.remove(hloc)
-                else:
-                    hloc.count -= 1
-                    hloc.sort(key=lambda x: x.count, reverse=True)
-                # recursively remove the hloc up the hierarchy, if we're not at the top already
-                if self.parent is not None:
-                    self.parent.remove_hloc(loc)
-                return
+            for loc in locs:
+                if hloc.compare(loc):
+                    if hloc.count == 1:
+                        self.hlocs.remove(hloc)
+                    else:
+                        hloc.count -= 1
+                        self.hlocs.sort(key=lambda x: x.count, reverse=True)
+                    # recursively remove the hloc up the hierarchy, if we're not at the top already
+                    if self.parent is not None:
+                        self.parent.remove_hloc(loc)
+                    return
 
 
 class DirectoryTree:
@@ -147,13 +163,13 @@ class DirectoryTree:
         self._add_item(Directory, name, location, path)
         self._lock.release()
 
-    def _delete_item(self, item):
+    def _delete_item(self, item, location, path):
         self._lock.acquire()
         parent_dir = os.path.dirname(item.rstrip('/'))
-        child = item[len(parent_dir):].strip('/')
         parent = self.find(parent_dir)
+        child = parent.get_child(item[len(parent_dir):].strip('/'))
         if parent is not None:
-            parent.remove_child(child)
+            parent.remove_child(child, location)
         self._lock.release()
 
     def find(self, path):
@@ -179,7 +195,7 @@ class DirectoryTree:
         for dirname in dirnames:
             self._add_directory(dirname, location, dirpath)
         for item in deletelist:
-            self._delete_item(item)
+            self._delete_item(item, location, dirpath)
 
     def _r_pretty_print(self, node, level, path):
         for item in node.children:

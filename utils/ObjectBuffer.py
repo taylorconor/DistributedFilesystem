@@ -72,12 +72,12 @@ class ObjectBuffer:
             self._cv.notify()
             self._cv.release()
 
-    def isEmpty(self):
+    def is_empty(self):
         if self._buf:
             return False
         return True
 
-    def getAllAdvertisements(self):
+    def get_all(self):
         return self._buf
 
     def clear(self):
