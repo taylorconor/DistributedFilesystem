@@ -1,7 +1,7 @@
 """
 Node
 
-An ordinary node server
+An ordinary node server, which stores files and replicates them to other nodes in its replication set.
 """
 
 import os
@@ -164,6 +164,7 @@ class Node(object):
             print "Received unusual response from " + server + ": " + data + ". Attempting to continue anyway."
         return s
 
+    # advertise *all* files in the Nodes filesystem to the DirectoryServer
     def _directory_server_advertisement(self, host, port, ds_host, ds_port):
         print "Advertising to Directory Server..."
         s = self._init_advertise("Directory Server", host, port, ds_host, ds_port)
@@ -179,6 +180,7 @@ class Node(object):
         s.close()
         print "Advertisement complete: Node and Directory Server in sync."
 
+    # advertise this Node to the replication manager, letting it know that this Node exists
     def _replication_manager_advertisement(self, host, port, rm_host, rm_port):
         print "Advertising to Replication Manager..."
         s = self._init_advertise("Replication Manager", host, port, rm_host, rm_port)
@@ -187,10 +189,13 @@ class Node(object):
         s.close()
         print "Advertisement complete: Node and Replication Manager in sync."
 
+    # perform a full advertise to the Directory Server and Replication Manager. this is done at startup
     def _full_advertise(self, host, port, ds_host, ds_port, rm_host, rm_port):
         self._directory_server_advertisement(host, port, ds_host, ds_port)
         self._replication_manager_advertisement(host, port, rm_host, rm_port)
 
+    # this manages batch updates of advertisements to the directory server. it runs in its own thread, and will sleep
+    # on a condition variable until data becomes available in the buffer to send to the directory server
     def _incremental_advertise(self, host, port, ds_host, ds_port):
         while True:
             # sleep on condition variable
@@ -215,6 +220,7 @@ class Node(object):
             s.close()
             print "Advertisement complete: Node and Directory Server in sync."
 
+    # find out which other Nodes are in the same replication set as this Node
     def _get_replication_set(self, host, port, rm_host, rm_port):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -239,6 +245,7 @@ class Node(object):
             return locations
         return None
 
+    # incrementally send batch updates to each Node in the replication set, *peer to peer*
     def _replication_manager_update(self, host, port, rm_host, rm_port):
         while True:
             # sleep on condition variable
@@ -263,7 +270,6 @@ class Node(object):
                 s.connect((loc.host, int(loc.port)))
                 conn = ConnectionHelper(s)
                 for item in adv_list:
-                    print "ADV: dirpath="+str(item.dirpath)+", dirnames="+str(item.dirnames)+", filenames="+str(item.filenames)+", deletelist="+str(item.deletelist)
                     for dir in item.dirnames:
                         s.send("XMKDIR "+dir)
                         data = s.recv(1024)

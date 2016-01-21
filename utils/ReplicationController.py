@@ -1,6 +1,8 @@
 """
-ReplicationManager
+ReplicationController.py
 
+Used by the ReplicationManager to store its local database of Nodes. These are stored in the form of ReplicationSet
+objects, where each node in a replication set shares its data with all the other nodes in the replication set.
 """
 
 import copy

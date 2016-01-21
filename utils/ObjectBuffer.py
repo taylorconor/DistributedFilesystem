@@ -1,7 +1,8 @@
 """
-ObjectBuffer
+ObjectBuffer.py
 
-Manages a buffered list of files and directories (such as the pending Advertisement buffer)
+Manages a buffered list of files and directories (such as the pending Advertisement buffer). this helps to reduce the
+amount of update traffic in the network by grouping multiple update requests into one large request.
 """
 import os
 from utils.Advertisement import Advertisement
@@ -9,6 +10,7 @@ from utils.Advertisement import Advertisement
 
 class ObjectBuffer:
 
+    # the type of object being added to the buffer
     class Type:
         file = 0
         directory = 1

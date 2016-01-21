@@ -1,3 +1,12 @@
+"""
+TCPServer.py
+
+This is a bare implementation of a multithreaded TCP server, and is used throughout the program. This TCP server is
+interesting because it abstracts a lot of the socket work away, but still gives implementing objects full control over
+how to handle responses. This is achieved by giving the TCP server a callback function to call (in a new thread) each
+time a message is received. It is the responsibility of the implementing object to handle the request.
+"""
+
 import threading
 import Queue
 import socket

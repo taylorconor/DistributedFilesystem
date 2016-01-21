@@ -1,5 +1,5 @@
 """
-DirectoryTree
+DirectoryTree.py
 
 Represents the DirectoryServer's database. Everything is stored as a tree structure made up of File and Directory
 objects. Everything is stored in memory
@@ -10,6 +10,8 @@ import random
 import copy
 
 
+# the location of a file/directory is which server(s) it is stored on. a file/directory may have multiple locations
+# due to replication.
 class Location:
 
     def __init__(self, host, port):
@@ -26,6 +28,7 @@ class Location:
         return self.host + ":" + self.port
 
 
+# a file is a basic node in the tree. it's name is *not* fully qualified, that is handled by the tree structure
 class File(object):
 
     def __init__(self, name, location, parent):
@@ -59,6 +62,8 @@ class File(object):
         return self.location[num].get_string()
 
 
+# a directory is a simple extension of a file that allows for nodes to have children (a file obviously can't have
+# children)
 class Directory(File):
 
     def __init__(self, name, location, parent):
@@ -91,6 +96,11 @@ class Directory(File):
         self.children = new_children
         self.remove_hloc(obj.location)
 
+    # a hloc is a "hierarchical location". this is an ordered list of any locations used in this directory's
+    # subdirectories and children, and how many times they are used. this info is used by the DirectoryServer to decide
+    # which location to store new files in.
+
+    # add a location to the list of hlocs. if it already exists, incrememnt its count
     def add_hloc(self, locs):
         # if loc is not an array, put it into an array!
         if not isinstance(locs, list):
@@ -115,6 +125,8 @@ class Directory(File):
             if self.parent is not None:
                 self.parent.add_hloc(loc)
 
+    # remove a hloc from the list. if its count is now 0, delete it from the list completely. otherwise, just decrement
+    # its count.
     def remove_hloc(self, locs):
         if locs is None:
             return
@@ -134,6 +146,7 @@ class Directory(File):
                     return
 
 
+# represents and manages all directories and files in the DirectoryServer's database
 class DirectoryTree:
 
     def __init__(self):

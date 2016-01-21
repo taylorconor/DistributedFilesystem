@@ -1,8 +1,11 @@
 """
-Advertisement
+Advertisement.py
 
 Represents an update advertisement sent from a Node to the Directory Server notifying it about updates to its file
 structure.
+
+An advertisement message is sent for each modified dirpath in the Node. When the Node starts initially, it must send
+an advertisement message for *every* dirpath it has in its local filesystem.
 """
 import json
 

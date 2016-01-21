@@ -1,3 +1,10 @@
+"""
+DirectoryServer.py
+
+This is the DirectoryServer, the only authorative list of all files (and their locations) in the filesystem. It manages
+the directory structure and listens for requests from clients and nodes for updates and queries.
+"""
+
 import os
 import sys
 import errno
@@ -10,11 +17,14 @@ import utils.DirectoryTree as DT
 
 class DirectoryServer:
 
+    # keeps directory location names consistent throughout the directory structure
     def _sanitise_location(self, loc):
         if not loc.startswith('/'):
             loc = '/' + loc
         return loc.rstrip('/')
 
+    # respond to advertisements, which are updates from Nodes. Nodes send these updates when their filesystems have
+    # changed
     def _advertise_handler(self, conn, host, port):
         conn.send(Response.OK)
         data = conn.recv(8096)
@@ -24,6 +34,8 @@ class DirectoryServer:
             conn.send(Response.OK)
             data = conn.recv(8096)
 
+    # respond to a request from a client to get the location of a file. it will try to respond with a random location
+    # (if the file is stored in multiple Nodes) to try to balance load between Nodes.
     def _get_handler(self, conn, location):
         node = self._tree.find(location)
         if node is None:
@@ -33,6 +45,8 @@ class DirectoryServer:
         else:
             conn.send(Response.OK + " " + node.random_loc()+" "+location)
 
+    # respond to a request from a client who wants to upload a new file. the DirectoryServer will choose a server for
+    # the client to upload the file to.
     def _put_handler(self, conn, location):
         location = self._sanitise_location(location)
         parent = os.path.dirname(location)
@@ -51,6 +65,8 @@ class DirectoryServer:
         # pick a random (existing) child location
         conn.send(Response.OK + " " + child.random_loc())
 
+    # respond to a request from a client who wants to create a new directory. the DirectoryServer will choose a server
+    # for the client to create the new directory in.
     def _mkdir_handler(self, conn, location):
         location = self._sanitise_location(location)
         parent = os.path.dirname(location)
@@ -68,6 +84,7 @@ class DirectoryServer:
         loc = pnode.hlocs[len(pnode.hlocs)-1]
         conn.send(Response.OK + " " + loc.get_string())
 
+    # respond to a client request to list all items in a current location. similar to 'ls' in linux.
     def _list_handler(self, conn, location):
         node = self._trexe.find(location)
         if node is None:
@@ -98,7 +115,6 @@ class DirectoryServer:
                 self._mkdir_handler(conn, input[1])
             elif input[0] == "LIST":
                 self._list_handler(conn, input[1])
-            # FOR TESTING ONLY
             elif input[0] == "PRINT":
                 self._tree.pretty_print(input[1])
             else:

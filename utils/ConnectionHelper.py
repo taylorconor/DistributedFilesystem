@@ -1,5 +1,5 @@
 """
-ConnectionHelper
+ConnectionHelper.py
 
 Wrapper class for socket. It makes sending and receiving files and large amounts of data easier
 """

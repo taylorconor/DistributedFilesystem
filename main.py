@@ -1,3 +1,11 @@
+"""
+main.py
+
+This file is used to initialise each server in the system (not the client). depending on the input parameters, this
+file will initialise a node, a directory server, or a replication server.
+"""
+
+
 import sys, signal, time
 
 if __name__ == "__main__":

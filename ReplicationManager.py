@@ -1,6 +1,7 @@
 """
 Replication Manager
 
+This server manages the replication sets of every Node in the distributed filesystem.
 """
 
 from utils.TCPServer import TCPServer
@@ -9,7 +10,7 @@ from utils.ReplicationController import ReplicationController
 from utils.DirectoryTree import Location
 
 
-class ReplicationManager():
+class ReplicationManager:
 
     def _advertise_handler(self, conn, host, port):
         location = Location(host, port)

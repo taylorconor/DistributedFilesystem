@@ -1,3 +1,8 @@
+"""
+Constants.py
+
+Global constants for the project, separated into relevant classes. These are all read-only.
+"""
 
 
 def constant(f):
