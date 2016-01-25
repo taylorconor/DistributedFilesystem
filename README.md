@@ -1,4 +1,6 @@
 #Distributed Filesystem
+This filesystem operates using an upload/download model. It's components are: a distributed filesystem, a directory
+service, replication.
 
 ##Components:
 - **Node**: An ordinary fileserver node
@@ -9,3 +11,6 @@
   - Authoritative source on the hierarchy of the filesystem and the location of each file
   - Sends information about the contents of the filesystem and the location of files to clients that request it
   - Doesn't actually store or transfer files, just metadata
+- **ReplicationManager**: Replication Manager server
+  - Assigns each Node to a replication set
+  - Responds to queries from nodes requesting the identity of other nodes in their set
