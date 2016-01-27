@@ -46,11 +46,21 @@ if __name__ == "__main__":
         if len(sys.argv) != 3:
             print "Usage: python " + sys.argv[0] + " --replication [port]"
             sys.exit()
-        print "Starting replication manager..."
+        print "Starting Replication Manager..."
         from ReplicationManager import ReplicationManager
         port = int(sys.argv[2])
         rm = ReplicationManager(port)
         print "Replication Manager started successfully."
+
+    elif sys.argv[1] == "--lock":
+        if len(sys.argv) != 3:
+            print "Usage: python " + sys.argv[0] + " --lock [port]"
+            sys.exit()
+        print "Starting Lock Server..."
+        from LockServer import LockServer
+        port = int(sys.argv[2])
+        ls = LockServer(port)
+        print "Lock Server started successfully."
 
     signal.signal(signal.SIGINT, signal_handler)
     while True:

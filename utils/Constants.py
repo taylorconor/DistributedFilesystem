@@ -26,6 +26,10 @@ class _Response(object):
     @constant
     def CANT_LIST():        return "CANT_LIST"          # Server can't list (e.g. calling LIST on a file)
     @constant
+    def LOCK_TAKEN():       return "LOCK_TAKEN"         # LockServer tried to lock a file that was already locked
+    @constant
+    def LOCK_FREE():        return "LOCK_FREE"          # LockServer tried to release a lock that was already free
+    @constant
     def ERROR():            return "ERROR"              # Server encountered an error, request not completed
 
 class _Interval(object):
