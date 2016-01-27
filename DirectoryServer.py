@@ -86,7 +86,7 @@ class DirectoryServer:
 
     # respond to a client request to list all items in a current location. similar to 'ls' in linux.
     def _list_handler(self, conn, location):
-        node = self._trexe.find(location)
+        node = self._tree.find(location)
         if node is None:
             conn.send(Response.NO_EXIST)
         elif not isinstance(node, DT.Directory):
