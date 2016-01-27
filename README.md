@@ -31,3 +31,5 @@ A sample client usage of the filesystem:
   * This is necessary because the node that the client downloaded the file from in step 4 may now have left the network, or may be part of a different replication set.
 7. Client uploads the modified file to the location it received from step 6.
 8. The client contacts the Lock Server again to unlock `/thesis.txt`.
+
+Note: client actions can be simulated using the `tester.py` file.
